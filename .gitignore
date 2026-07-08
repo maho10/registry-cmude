@@ -1,0 +1,22 @@
+# Environment
+.env
+.env.local
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/routes/__pycache__/
+backend/.venv/
+
+# Scripts
+scripts/__pycache__/
+scripts/.venv/
+qr_codes.pdf
+
+# IDE
+.idea/
+.vscode/
