@@ -20,3 +20,10 @@ qr_codes.pdf
 # IDE
 .idea/
 .vscode/
+
+# Supabase CLI local state (machine-specific)
+supabase/.temp/
+
+# Participant data (PII) — never commit real rosters
+supabase/*.xlsx
+supabase/*.csv
