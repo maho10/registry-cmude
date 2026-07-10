@@ -29,6 +29,7 @@ export interface Participant {
   arrival_kit_at: string | null;
   is_minor: boolean;
   room: string | null;
+  role: string | null;
   created_at: string;
   updated_at: string;
 }

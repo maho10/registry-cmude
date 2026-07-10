@@ -61,6 +61,7 @@ export default function ParticipantDetailPage() {
           <span className="badge bg-blue-100 text-blue-800">
             Paquete {p.package_type === "full" ? "completo" : "parcial"}
           </span>
+          {p.role && <span className="badge bg-gray-100 text-gray-700">{p.role}</span>}
           {p.diet_type && <span className={`badge ${diet.bg} ${diet.text}`}>{diet.label}</span>}
           {p.is_minor && <span className="badge bg-orange-100 text-orange-800">Menor de edad</span>}
           {p.room && <span className="badge bg-gray-100 text-gray-700">Cuarto {p.room}</span>}

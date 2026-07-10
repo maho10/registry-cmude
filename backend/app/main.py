@@ -1,10 +1,11 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # must run before importing routes — they read env vars at module load time
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 from .routes import import_csv
-
-load_dotenv()
 
 app = FastAPI(title="CMUDE Registry API")
 

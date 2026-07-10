@@ -136,6 +136,7 @@ export default function ParticipantsPage() {
                 <tr>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Paquete</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-600">Rol</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Dieta</th>
                   <th className="text-left px-4 py-3 font-semibold text-gray-600">Cuarto</th>
                   <th className="text-center px-4 py-3 font-semibold text-gray-600">Kit</th>
@@ -168,6 +169,7 @@ export default function ParticipantsPage() {
                           {p.package_type === "full" ? "Completo" : "Parcial"}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-gray-700">{p.role ?? <span className="text-gray-300">—</span>}</td>
                       <td className="px-4 py-3">
                         {p.diet_type ? (
                           <span className={`badge ${diet.bg} ${diet.text}`}>{diet.label}</span>
@@ -194,7 +196,7 @@ export default function ParticipantsPage() {
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
+                    <td colSpan={8} className="px-4 py-10 text-center text-gray-400">
                       No hay participantes
                     </td>
                   </tr>

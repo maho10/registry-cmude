@@ -52,7 +52,7 @@ def load_rows(path: str, sheet: str) -> tuple[list[dict], list[str]]:
     errors = []
 
     for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-        name, _rol, package_type_raw, diet_raw, room_raw, minor_raw = (list(row) + [None] * 6)[:6]
+        name, role_raw, package_type_raw, diet_raw, room_raw, minor_raw = (list(row) + [None] * 6)[:6]
         if not name or not str(name).strip():
             continue  # blank rows / stray notes (e.g. a legend left in the diet column)
 
@@ -70,6 +70,7 @@ def load_rows(path: str, sheet: str) -> tuple[list[dict], list[str]]:
         diet_type = DIET_MAP.get(diet_key)
 
         room = str(room_raw).strip() if room_raw else None
+        role = str(role_raw).strip() if role_raw else None
 
         rows.append({
             "name": name,
@@ -78,6 +79,7 @@ def load_rows(path: str, sheet: str) -> tuple[list[dict], list[str]]:
             "food_restrictions": None,
             "is_minor": bool(minor_raw),
             "room": room,
+            "role": role,
         })
 
     return rows, errors
