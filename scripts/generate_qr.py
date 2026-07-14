@@ -39,19 +39,20 @@ LOGO_SVG_PATH = Path(__file__).parent.parent / "frontend" / "src" / "assets" / "
 # Mirrors DIET_HEX_COLORS in frontend/src/lib/supabase.ts — keep both in sync.
 # Keys must match the diet_type values in the database (lowercase).
 DIET_COLORS: dict[str, tuple[int, int, int]] = {
-    "none":               (107, 114, 128),   # gray-500
+    "none":               (124, 58, 237),   # purple-600
     "vegetarian":         (22,  163, 74),    # green-600
     "vegan":              (5,   150, 105),   # emerald-600
     "lactose-intolerant": (202, 138, 4),     # yellow-600
     "allergy":            (220, 38,  38),    # red-600
 }
-DEFAULT_COLOR = (124, 58, 237)  # purple-600, unknown diet types
+DEFAULT_COLOR = (107, 114, 128)  # gray-500, unknown diet types
 
 # ── Layout constants (pixels at 150 dpi) ─────────────────────────────────────
 QR_SIZE = 300       # QR module size
 BORDER = 20         # colored border width
 LABEL_H = 60        # height of name + diet label below QR
-LOGO_SIZE = 40       # tinted logo icon next to the name
+LOGO_SIZE = 64       # tinted logo embedded at the QR's center
+LOGO_HALO = LOGO_SIZE + 16  # white backing square so the logo stays legible over QR modules
 CARD_W = QR_SIZE + BORDER * 2
 CARD_H = QR_SIZE + BORDER * 2 + LABEL_H
 CARDS_PER_ROW = 2
@@ -111,7 +112,7 @@ def make_qr_image(participant: dict) -> Image.Image:
 
     qr = qrcode.QRCode(
         version=None,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # high redundancy — needed since the logo covers the center
         box_size=8,
         border=2,
     )
@@ -120,6 +121,15 @@ def make_qr_image(participant: dict) -> Image.Image:
     qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
     qr_img = qr_img.resize((QR_SIZE, QR_SIZE), Image.LANCZOS)
 
+    # Embed the tinted logo at the QR's center, over a white halo so it stays
+    # legible against the modules behind it (mirrors the frontend's excavate behavior).
+    halo = Image.new("RGB", (LOGO_HALO, LOGO_HALO), (255, 255, 255))
+    halo_pos = ((QR_SIZE - LOGO_HALO) // 2, (QR_SIZE - LOGO_HALO) // 2)
+    qr_img.paste(halo, halo_pos)
+    logo = tinted_logo(color)
+    logo_pos = ((QR_SIZE - LOGO_SIZE) // 2, (QR_SIZE - LOGO_SIZE) // 2)
+    qr_img.paste(logo, logo_pos, logo)
+
     # Colored border card
     card = Image.new("RGB", (CARD_W, CARD_H), color)
     card.paste(qr_img, (BORDER, BORDER))
@@ -127,11 +137,6 @@ def make_qr_image(participant: dict) -> Image.Image:
     # White label area
     label_area = Image.new("RGB", (CARD_W, LABEL_H), (255, 255, 255))
     draw = ImageDraw.Draw(label_area)
-
-    logo = tinted_logo(color)
-    logo_y = (LABEL_H - LOGO_SIZE) // 2
-    label_area.paste(logo, (10, logo_y), logo)
-    text_x = 10 + LOGO_SIZE + 10
 
     name = participant["name"]
     pkg = "Completo" if participant.get("package_type") == "full" else "Parcial"
@@ -144,8 +149,8 @@ def make_qr_image(participant: dict) -> Image.Image:
         font_name = ImageFont.load_default()
         font_meta = font_name
 
-    draw.text((text_x, 8), name[:26], font=font_name, fill=(0, 0, 0))
-    draw.text((text_x, 32), f"{pkg} · {diet_label}", font=font_meta, fill=(80, 80, 80))
+    draw.text((10, 8), name[:30], font=font_name, fill=(0, 0, 0))
+    draw.text((10, 32), f"{pkg} · {diet_label}", font=font_meta, fill=(80, 80, 80))
 
     card.paste(label_area, (0, BORDER * 2 + QR_SIZE))
     return card

@@ -48,14 +48,13 @@ export default function ParticipantDetailPage() {
   const complete = isComplete(p);
 
   return (
-    <div className="space-y-4 max-w-2xl">
-      <button onClick={() => navigate(-1)} className="text-blue-600 text-sm">
-        ← Volver
-      </button>
+    <div className="flex flex-col lg:flex-row gap-4 lg:items-start max-w-4xl">
+      <div className="space-y-4 max-w-2xl flex-1">
+        <button onClick={() => navigate(-1)} className="text-blue-600 text-sm">
+          ← Volver
+        </button>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <QrBadge participant={p} />
-        <div className="bg-white rounded-2xl shadow p-5 flex-1">
+        <div className="bg-white rounded-2xl shadow p-5">
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{p.name}</h1>
             {complete && <span className="badge bg-green-100 text-green-700">Completo</span>}
@@ -75,32 +74,34 @@ export default function ParticipantDetailPage() {
             </p>
           )}
         </div>
+
+        <Section title="Kit de llegada">
+          <CheckRow
+            label="Welcome Kit + Gafete"
+            checked={p.arrival_kit}
+            loading={updating === "arrival_kit"}
+            onToggle={() => toggle("arrival_kit", p.arrival_kit)}
+          />
+        </Section>
+
+        <Section title="Almuerzos">
+          {lunchPhases.map((phase) => {
+            const field = lunchField(phase.day) as string;
+            const checked = p[lunchField(phase.day)] as boolean;
+            return (
+              <CheckRow
+                key={phase.day}
+                label={phase.label}
+                checked={checked}
+                loading={updating === field}
+                onToggle={() => toggle(field, checked)}
+              />
+            );
+          })}
+        </Section>
       </div>
 
-      <Section title="Kit de llegada">
-        <CheckRow
-          label="Welcome Kit + Gafete"
-          checked={p.arrival_kit}
-          loading={updating === "arrival_kit"}
-          onToggle={() => toggle("arrival_kit", p.arrival_kit)}
-        />
-      </Section>
-
-      <Section title="Almuerzos">
-        {lunchPhases.map((phase) => {
-          const field = lunchField(phase.day) as string;
-          const checked = p[lunchField(phase.day)] as boolean;
-          return (
-            <CheckRow
-              key={phase.day}
-              label={phase.label}
-              checked={checked}
-              loading={updating === field}
-              onToggle={() => toggle(field, checked)}
-            />
-          );
-        })}
-      </Section>
+      <QrBadge participant={p} />
     </div>
   );
 }
