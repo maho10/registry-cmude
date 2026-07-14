@@ -27,3 +27,4 @@ supabase/.temp/
 # Participant data (PII) — never commit real rosters
 supabase/*.xlsx
 supabase/*.csv
+/frontend/src/assets/cmude-logo.svg

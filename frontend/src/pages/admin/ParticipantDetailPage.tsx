@@ -8,6 +8,7 @@ import {
   isComplete,
   dietStyle,
 } from "../../lib/supabase";
+import QrBadge from "../../components/QrBadge";
 
 export default function ParticipantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,25 +53,28 @@ export default function ParticipantDetailPage() {
         ← Volver
       </button>
 
-      <div className="bg-white rounded-2xl shadow p-5">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-bold text-gray-900">{p.name}</h1>
-          {complete && <span className="badge bg-green-100 text-green-700">Completo</span>}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <QrBadge participant={p} />
+        <div className="bg-white rounded-2xl shadow p-5 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">{p.name}</h1>
+            {complete && <span className="badge bg-green-100 text-green-700">Completo</span>}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <span className="badge bg-blue-100 text-blue-800">
+              Paquete {p.package_type === "full" ? "completo" : "parcial"}
+            </span>
+            {p.role && <span className="badge bg-gray-100 text-gray-700">{p.role}</span>}
+            {p.diet_type && <span className={`badge ${diet.bg} ${diet.text}`}>{diet.label}</span>}
+            {p.is_minor && <span className="badge bg-orange-100 text-orange-800">Menor de edad</span>}
+            {p.room && <span className="badge bg-gray-100 text-gray-700">Cuarto {p.room}</span>}
+          </div>
+          {p.food_restrictions && (
+            <p className="mt-3 text-sm text-red-700 font-medium bg-red-50 rounded-lg px-3 py-2">
+              ⚠️ {p.food_restrictions}
+            </p>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2 mt-2">
-          <span className="badge bg-blue-100 text-blue-800">
-            Paquete {p.package_type === "full" ? "completo" : "parcial"}
-          </span>
-          {p.role && <span className="badge bg-gray-100 text-gray-700">{p.role}</span>}
-          {p.diet_type && <span className={`badge ${diet.bg} ${diet.text}`}>{diet.label}</span>}
-          {p.is_minor && <span className="badge bg-orange-100 text-orange-800">Menor de edad</span>}
-          {p.room && <span className="badge bg-gray-100 text-gray-700">Cuarto {p.room}</span>}
-        </div>
-        {p.food_restrictions && (
-          <p className="mt-3 text-sm text-red-700 font-medium bg-red-50 rounded-lg px-3 py-2">
-            ⚠️ {p.food_restrictions}
-          </p>
-        )}
       </div>
 
       <Section title="Kit de llegada">

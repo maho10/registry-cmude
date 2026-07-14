@@ -2,7 +2,7 @@
 Generate a printable PDF of QR codes for all CMUDE participants.
 
 Usage:
-    pip install qrcode[pil] pillow reportlab httpx python-dotenv
+    pip install qrcode[pil] pillow reportlab svglib httpx python-dotenv
     python scripts/generate_qr.py --output qr_codes.pdf
 
 Environment variables (or backend/.env):
@@ -21,7 +21,10 @@ import httpx
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPM
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent.parent / "backend" / ".env")
@@ -30,27 +33,61 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-# ── Diet → QR border color map ────────────────────────────────────────────────
-# Fill in once the organizers finalize dietary restriction categories.
+LOGO_SVG_PATH = Path(__file__).parent.parent / "frontend" / "src" / "assets" / "cmude-logo.svg"
+
+# ── Diet → color map ──────────────────────────────────────────────────────────
+# Mirrors DIET_HEX_COLORS in frontend/src/lib/supabase.ts — keep both in sync.
 # Keys must match the diet_type values in the database (lowercase).
 DIET_COLORS: dict[str, tuple[int, int, int]] = {
-    "none":               (100, 100, 100),   # grey
-    "vegetarian":         (34,  139, 34),    # green
-    "vegan":              (0,   100, 0),     # dark green
-    "allergy":            (200, 50,  50),    # red
-    "lactose-intolerant": (218, 165, 32),    # goldenrod
+    "none":               (107, 114, 128),   # gray-500
+    "vegetarian":         (22,  163, 74),    # green-600
+    "vegan":              (5,   150, 105),   # emerald-600
+    "lactose-intolerant": (202, 138, 4),     # yellow-600
+    "allergy":            (220, 38,  38),    # red-600
 }
-DEFAULT_COLOR = (130, 0, 200)  # purple for unknown types
+DEFAULT_COLOR = (124, 58, 237)  # purple-600, unknown diet types
 
 # ── Layout constants (pixels at 150 dpi) ─────────────────────────────────────
 QR_SIZE = 300       # QR module size
 BORDER = 20         # colored border width
 LABEL_H = 60        # height of name + diet label below QR
+LOGO_SIZE = 40       # tinted logo icon next to the name
 CARD_W = QR_SIZE + BORDER * 2
 CARD_H = QR_SIZE + BORDER * 2 + LABEL_H
 CARDS_PER_ROW = 2
 CARDS_PER_COL = 3
 CARDS_PER_PAGE = CARDS_PER_ROW * CARDS_PER_COL
+
+_logo_cache: dict[tuple[int, int, int], Image.Image] = {}
+
+
+def tinted_logo(color: tuple[int, int, int], size: int = LOGO_SIZE) -> Image.Image:
+    """Rasterizes the CMUDE logo and recolors it to `color`, ignoring its own fill.
+
+    Uses the logo's shape (via luminance) as an alpha mask, so any solid-fill
+    source SVG can be tinted to match the QR's diet color — same technique as
+    the CSS mask-image used for this logo in the admin frontend.
+    """
+    cache_key = (*color, size)
+    if cache_key in _logo_cache:
+        return _logo_cache[cache_key]
+
+    drawing = svg2rlg(str(LOGO_SVG_PATH))
+    scale = size / max(drawing.width, drawing.height)
+    drawing.width *= scale
+    drawing.height *= scale
+    drawing.scale(scale, scale)
+
+    buf = io.BytesIO()
+    renderPM.drawToFile(drawing, buf, fmt="PNG", bg=0xFFFFFF)
+    buf.seek(0)
+    raster = Image.open(buf).convert("L")
+    alpha = raster.point(lambda p: 255 - p)  # dark shape -> opaque
+
+    tinted = Image.new("RGBA", raster.size, color + (0,))
+    tinted.putalpha(alpha)
+    _logo_cache[cache_key] = tinted
+    return tinted
 
 
 def fetch_participants() -> list[dict]:
@@ -91,6 +128,11 @@ def make_qr_image(participant: dict) -> Image.Image:
     label_area = Image.new("RGB", (CARD_W, LABEL_H), (255, 255, 255))
     draw = ImageDraw.Draw(label_area)
 
+    logo = tinted_logo(color)
+    logo_y = (LABEL_H - LOGO_SIZE) // 2
+    label_area.paste(logo, (10, logo_y), logo)
+    text_x = 10 + LOGO_SIZE + 10
+
     name = participant["name"]
     pkg = "Completo" if participant.get("package_type") == "full" else "Parcial"
     diet_label = diet.capitalize()
@@ -102,8 +144,8 @@ def make_qr_image(participant: dict) -> Image.Image:
         font_name = ImageFont.load_default()
         font_meta = font_name
 
-    draw.text((10, 8), name[:30], font=font_name, fill=(0, 0, 0))
-    draw.text((10, 32), f"{pkg} · {diet_label}", font=font_meta, fill=(80, 80, 80))
+    draw.text((text_x, 8), name[:26], font=font_name, fill=(0, 0, 0))
+    draw.text((text_x, 32), f"{pkg} · {diet_label}", font=font_meta, fill=(80, 80, 80))
 
     card.paste(label_area, (0, BORDER * 2 + QR_SIZE))
     return card
@@ -135,10 +177,12 @@ def generate_pdf(participants: list[dict], output_path: str):
             img.save(buf, format="PNG")
             buf.seek(0)
 
-            draw_w = min(cell_w - 5, CARD_W)
-            draw_h = draw_w * (CARD_H / CARD_W)
+            # Scale to fit within the cell on both axes, keeping the card's aspect ratio
+            scale = min((cell_w - 5) / CARD_W, (cell_h - 5) / CARD_H)
+            draw_w = CARD_W * scale
+            draw_h = CARD_H * scale
             c.drawImage(
-                buf,  # type: ignore[arg-type]
+                ImageReader(buf),
                 x, y,
                 width=draw_w,
                 height=draw_h,

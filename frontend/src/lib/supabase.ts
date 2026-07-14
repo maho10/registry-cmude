@@ -110,6 +110,24 @@ export function dietStyle(dietType: string | null) {
   return DIET_COLORS[key] ?? { bg: "bg-purple-100", text: "text-purple-800", label: dietType ?? "—" };
 }
 
+/**
+ * Solid hex per diet type, used for the QR code color and the logo tint.
+ * Mirrors DIET_COLORS above — keep in sync with the RGB map in scripts/generate_qr.py.
+ */
+export const DIET_HEX_COLORS: Record<string, string> = {
+  none: "#6b7280", // gray-500
+  vegetarian: "#16a34a", // green-600
+  vegan: "#059669", // emerald-600
+  "lactose-intolerant": "#ca8a04", // yellow-600
+  allergy: "#dc2626", // red-600
+};
+const DEFAULT_DIET_HEX = "#7c3aed"; // purple-600, unknown diet types
+
+export function dietHexColor(dietType: string | null): string {
+  const key = dietType?.toLowerCase() ?? "none";
+  return DIET_HEX_COLORS[key] ?? DEFAULT_DIET_HEX;
+}
+
 export type ScanMode = "kit" | "lunch";
 
 export interface ScanResult {
