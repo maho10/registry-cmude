@@ -29,8 +29,11 @@ export default function QrBadge({ participant }: { participant: Participant }) {
         level="H"
         imageSettings={{
           src: coloredLogoDataUri(color),
-          height: 40,
-          width: 40,
+          // Kept small relative to the QR (~12.5%) — larger logos excavate enough of
+          // the center to break decoding for real (36-char) participant UUIDs at
+          // level H. Verified with pyzbar across all diet colors before landing on this.
+          height: 24,
+          width: 24,
           excavate: true,
         }}
       />

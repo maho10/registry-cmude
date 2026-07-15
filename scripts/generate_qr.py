@@ -49,17 +49,22 @@ DEFAULT_COLOR = (107, 114, 128)  # gray-500, unknown diet types
 
 # ── Layout constants (pixels at 150 dpi) ─────────────────────────────────────
 QR_SIZE = 300       # QR module size
-BORDER = 20         # colored border width
+PADDING = 20         # white padding around the QR (cut/quiet-zone margin, not diet-colored)
 LABEL_H = 60        # height of name + diet label below QR
-LOGO_SIZE = 64       # tinted logo embedded at the QR's center
-LOGO_HALO = LOGO_SIZE + 16  # white backing square so the logo stays legible over QR modules
-CARD_W = QR_SIZE + BORDER * 2
-CARD_H = QR_SIZE + BORDER * 2 + LABEL_H
+LOGO_SIZE = 30       # tinted logo embedded at the QR's center
+LOGO_HALO = 44  # white backing square — kept well under ~20% of QR_SIZE so real UUID-length
+                # URLs (QR version 7 at level H) still decode reliably; verified with pyzbar
+CARD_W = QR_SIZE + PADDING * 2
+CARD_H = QR_SIZE + PADDING * 2 + LABEL_H
 CARDS_PER_ROW = 2
 CARDS_PER_COL = 3
 CARDS_PER_PAGE = CARDS_PER_ROW * CARDS_PER_COL
 
 _logo_cache: dict[tuple[int, int, int], Image.Image] = {}
+
+
+def _hex(color: tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*color)
 
 
 def tinted_logo(color: tuple[int, int, int], size: int = LOGO_SIZE) -> Image.Image:
@@ -118,7 +123,8 @@ def make_qr_image(participant: dict) -> Image.Image:
     )
     qr.add_data(url)
     qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    # Colored modules on a white background — matches the QR shown in the admin webpage.
+    qr_img = qr.make_image(fill_color=_hex(color), back_color="white").convert("RGB")
     qr_img = qr_img.resize((QR_SIZE, QR_SIZE), Image.LANCZOS)
 
     # Embed the tinted logo at the QR's center, over a white halo so it stays
@@ -130,13 +136,13 @@ def make_qr_image(participant: dict) -> Image.Image:
     logo_pos = ((QR_SIZE - LOGO_SIZE) // 2, (QR_SIZE - LOGO_SIZE) // 2)
     qr_img.paste(logo, logo_pos, logo)
 
-    # Colored border card
-    card = Image.new("RGB", (CARD_W, CARD_H), color)
-    card.paste(qr_img, (BORDER, BORDER))
+    # White card with the QR centered in a quiet-zone margin
+    card = Image.new("RGB", (CARD_W, CARD_H), (255, 255, 255))
+    card.paste(qr_img, (PADDING, PADDING))
 
-    # White label area
-    label_area = Image.new("RGB", (CARD_W, LABEL_H), (255, 255, 255))
-    draw = ImageDraw.Draw(label_area)
+    draw = ImageDraw.Draw(card)
+    # Thin neutral outline as a cut guide
+    draw.rectangle([(0, 0), (CARD_W - 1, CARD_H - 1)], outline=(220, 220, 220), width=1)
 
     name = participant["name"]
     pkg = "Completo" if participant.get("package_type") == "full" else "Parcial"
@@ -149,10 +155,10 @@ def make_qr_image(participant: dict) -> Image.Image:
         font_name = ImageFont.load_default()
         font_meta = font_name
 
-    draw.text((10, 8), name[:30], font=font_name, fill=(0, 0, 0))
-    draw.text((10, 32), f"{pkg} · {diet_label}", font=font_meta, fill=(80, 80, 80))
+    label_y = PADDING * 2 + QR_SIZE
+    draw.text((PADDING, label_y + 6), name[:30], font=font_name, fill=(0, 0, 0))
+    draw.text((PADDING, label_y + 30), f"{pkg} · {diet_label}", font=font_meta, fill=(80, 80, 80))
 
-    card.paste(label_area, (0, BORDER * 2 + QR_SIZE))
     return card
 
 
